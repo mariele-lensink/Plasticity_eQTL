@@ -55,3 +55,52 @@ run_eqtl<-function(yaml,tag){
   print("finished saving lod (out)")
 }
 
+order_split <- function(df) {
+  ordered <- df[order(df$qtl_chr, df$qtl_pos), ]
+  split(ordered, by = 'qtl_chr')
+}
+
+centimorgan_slider<-function(positions,window,stepsize,cms) {
+  #set initial window ranges before loop 
+  rangemin<-1
+  rangemax<-rangemin+window-1
+  peakcounts<-c()
+  while(rangemax <= cms){
+    n<-sum(positions >= rangemin & positions < rangemax)
+    peakcounts<-c(peakcounts,n)
+    
+    rangemin<- rangemin+stepsize
+    rangemax<-rangemax+stepsize
+    
+  }
+  return(peakcounts)
+}
+
+apply_slider_to_processed_list <- function(qtls_processed, window, stepsize, cms) {
+  lapply(qtls_processed, function(lst) {
+    lapply(lst, function(i) data.table(centimorgan_slider(i[, qtl_pos], window, stepsize, cms)))
+  })
+}
+
+reformat_for_ggplot <- function(dt_list) {
+  treatment_names <- names(dt_list)
+  reformatted_list <- list()
+  for(trt in treatment_names) {
+    dt <- dt_list[[trt]]
+    index <- seq_len(nrow(dt[[1]]))
+    for(i in seq_along(dt)) {
+      dt[[i]] <- data.table(Count = dt[[i]]$V1, Index = index, Treatment = trt, Chromosome = as.character(i))
+    }
+    combined_dt <- rbindlist(dt)
+    reformatted_list[[trt]] <- combined_dt
+  }
+  all_combined <- rbindlist(reformatted_list)
+  all_combined[, Treatment := factor(Treatment, levels = treatment_names)]
+  return(all_combined)
+}
+
+generate_random_qtl_data_table <- function(qtl_count, total_cms, permutations = 1000) {
+  random_matrix <- matrix(runif(qtl_count * permutations, 0, total_cms), nrow = qtl_count, ncol = permutations)
+  random_qtls <- as.data.table(random_matrix)
+  return(random_qtls)
+}
