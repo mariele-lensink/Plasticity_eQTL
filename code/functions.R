@@ -104,3 +104,5 @@ generate_random_qtl_data_table <- function(qtl_count, total_cms, permutations = 
   random_qtls <- as.data.table(random_matrix)
   return(random_qtls)
 }
+
+
