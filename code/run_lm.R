@@ -55,3 +55,13 @@ stopCluster(clust)
 
 saveRDS(effectoutput,"lm_summary")
 
+
+effectsizes_dt<-readRDS("lm_summary")
+
+rsqs<-unlist(lapply(effectsizes_dt,function(x){
+  x[[8]]
+}))
+
+dt<-fread("data/qtls_notcollapsed_March18_10cM.txt")
+dt<-data.table(dt,rsq=rsqs)
+fwrite(dt,"qtls_10cMwindow_notcollapsed_rsq_March18.txt")

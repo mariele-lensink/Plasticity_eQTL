@@ -5,7 +5,7 @@ library(rlist)
 library(reshape2)
 source("github/plasticity_eQTL/code/functions.R")
 
-qtls<-fread("data/qtls_notcollapsed_March7.txt")
+qtls<-fread("qtls_10cMwindow_notcollapsed_rsq_March18.txt")
 #reordering peaks by chromosome then position on chromosome (not sure if necessary but it makes me feel better)
 qtls_list<-split(qtls,by='trt')
 
