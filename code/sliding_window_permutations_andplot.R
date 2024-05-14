@@ -1,11 +1,12 @@
 library(data.table)
 library(ggplot2)
-
 library(rlist)
 library(reshape2)
+library(patchwork)
 source("github/plasticity_eQTL/code/functions.R")
 
-qtls<-fread("qtls_10cMwindow_notcollapsed_rsq_March18.txt")
+qtls<-fread("data/qtls_10cMwindow_notcollapsed_rsq_March18.txt")
+qtls<-qtls[type=="cis"]
 #reordering peaks by chromosome then position on chromosome (not sure if necessary but it makes me feel better)
 qtls_list<-split(qtls,by='trt')
 
@@ -41,19 +42,29 @@ SAcutoff<-quantile(as.vector(as.matrix(SAperm_windowcounts)),0.95)
 SWcutoff<-quantile(as.vector(as.matrix(SWperm_windowcounts)),0.95)
 
 
-
+ciscounts <- sliding_window_counts_ggplot[!(Count == "0" & Index > 73)]
+transcounts <-sliding_window_counts_ggplot[!(Count == "0" & Index > 73)]
 custom_colors <- c("SA" = "#377EB8", "delta" = "#E6550D", "SW" = "#4DAF4A")
-ggplot(subdt,aes(x=Index,y=Count,color = Treatment))+
+trans<-ggplot(transcounts,aes(x=Index,y=Count,color = Treatment))+
   scale_color_manual(values=custom_colors)+
+  scale_y_continuous(expand = c(0,0))+
   geom_line()+facet_wrap(~Chromosome,nrow = 1,scales = 'free_x')+
   theme_bw()+
   ylab('# of Transcripts')+
-  theme(text = element_text(size = 9),axis.text.x = element_text(angle = 45, vjust = 1.25, hjust=1))+
-  ggtitle("Frequency of QTLs across the A. thaliana genome")+
+  xlab(NULL)+
+  theme(text = element_text(size = 9),
+        axis.text.x = element_text(angle = 45, vjust = 1.25, hjust=1))+
   geom_hline(yintercept = deltacutoff, linetype="dashed", color = "#E6550D", linewidth=.4)+
   geom_hline(yintercept = SAcutoff, linetype="dashed", color = "#377EB8", linewidth=.4)+
   geom_hline(yintercept = SWcutoff, linetype="dashed", color = "#4DAF4A", linewidth=.4)+
-  theme(legend.position=c(.91,.8),text = element_text(size = 9),axis.text = element_text(size=9),
-        legend.background = element_rect(fill='transparent'))
+  theme(legend.position=c(0.1,0.8),
+        text = element_text(size = 6),
+        axis.text = element_text(size=6),
+        legend.background = element_rect(fill='transparent'),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        legend.key.size = unit(0.4, "cm"),  # Adjust the key size
+        legend.spacing.y = unit(0.05, "cm"),  # Adjust spacing between legend items
+        legend.box.margin = margin(1, 1, 1, 1))
  
-
+combined_plot<-trans/cis

@@ -7,22 +7,29 @@ library(ggh4x)
 library(forcats)
 library(ggforce)
 
-dt<-fread("qtls_10cMwindow_fixed_overlap_5.5cm_march18.txt")
+dt<-fread("data/qtls_10cMwindow_fixed_overlap_5.5cm_march18.txt")
 highs<-dt[,.SD[rsq==max(rsq)],by = .(trtgroup,type)]
 colnames(highs)[3]<-'txname'
-
+#had to pick 2 different transcripts for SA cis and SW cis so they arent the same
+#dt[trtgroup == "SW"&type == "cis",.SD, .SDcols=names(dt)][order(-rsq)]
+#sa cisAt2g21640
+#silwet cis At2g20670
+highs
+highs<-highs[!((trtgroup %in% c("SA","SW")) & (type == "cis")),]
+high1<-dt[type=="cis"&trtgroup == "SA"& txname=="At2g21640",]
+high2<-dt[type=="cis"&trtgroup == "SW"& txname=="At2g20670",]
+highs<-rbind(highs,high1,high2)
 #get transcript abundance data
-pheno<-fread("rils_pheno.txt")
+pheno<-fread("data/rils_pheno.txt")
 #read in map of genotypes for the rils, make names compatible 
-geno<-fread("geno_editednames.txt")
+geno<-fread("data/geno_editednames.txt")
 #read in gmap
-gmap<-fread("gmap_editiednames.txt")
-igmap
+igmap<-fread("data/imputed_gmap_final.txt")
+gmap<-fread("data/original/BayxSha_gmap.csv")
+gmap<-gmap[,marker := gsub("\\..*","",marker)]
 #if transcript does not have genotype information, 
 #just get the genotype information of the nearest marker
 highs[, closest_marker_qtl := gmap[.SD, on = .(chr = qtl_chr, pos = qtl_pos), roll = "nearest", x.marker]]
-
-library(data.table) # Assuming you're using data.tables
 
 # Define the function
 find_closest_marker <- function(highs, igmap, gmap) {
@@ -34,10 +41,10 @@ find_closest_marker <- function(highs, igmap, gmap) {
     current_txname <- highs$txname[i]
     
     # Find the corresponding tx_pos from igmap
-    tx_pos <- igmap[txname == current_txname]$tx_pos
+    tx_pos <- igmap[marker == current_txname]$pos
     
     # Extract tx_chr for the current row to filter gmap
-    tx_chr <- igmap[txname == current_txname]$tx_chr
+    tx_chr <- igmap[marker == current_txname]$chr
     
     # Filter gmap for the current chromosome
     gmap_chr <- gmap[chr == tx_chr]
@@ -60,11 +67,6 @@ find_closest_marker <- function(highs, igmap, gmap) {
 
 # Example usage
 highs_updated <- find_closest_marker(highs, igmap, gmap)
-
-
-
-
-
 
 #function to merge the phenotype and genotype information based on the qtl data
 merge_pheno_geno<-function(qtldt){
@@ -93,38 +95,12 @@ merge_pheno_geno<-function(qtldt){
 highsgeneinfolist<-merge_pheno_geno(highs_updated)
 highsgeneinfo<-rbindlist(highsgeneinfolist)
 
-geneplots<-lapply(highsgeneinfolist,FUN = function(genetable){
-  genetable[genotype==-1]<-NA
-  genetable<-na.omit(genetable)
-  genedtmean <- na.omit(genetable[, mean(transcript), by = .(treatment, genotype)])
-  colnames(genedtmean)[3] <- "transcript_abundance"
-  gpl<-ggplot(genedtmean,aes(x=genotype,y=transcript_abundance,color=treatment))+
-    geom_line(aes(group=treatment))+
-    ggtitle(paste(genetable$trtgroup,"\n",genetable$txname))+
-    theme(plot.title = element_text(size=6,face = 'bold'))
-  
-  return(gpl)
-})
-pdf("single_gene_plots_collapsedqtls_final.pdf", width = 8, height = 14) # Adjust dimensions as needed
-do.call("grid.arrange", c(geneplots, ncol = 2, top = "Gene Expression Plots"))
-dev.off() # Close the PDF device
-
-
-
-
-
-
-#highsdtmean<-na.omit(highsgeneinfo[,mean(transcript),by = .(treatment,genotype,txname,type)])
-colnames(highsdtmean)[5] <- "transcript_abundance"
-#highsgeneinfo$id.trt<-paste(highsgeneinfo[,1],highsgeneinfo[,2])
-
 highsgeneinfo[genotype==-1]<-NA
 highsgeneinfo<-na.omit(highsgeneinfo)
+
 ##########################################################################################################
 #environment single gene plots
 ##########################################################################################################
-highsgeneinfo[genotype==-1]<-NA
-highsgeneinfo<-na.omit(highsgeneinfo)
 unique_combinations<-unique(highsgeneinfo[,.(trtgroup,txname,type)])
 highsnodelta<-highsgeneinfo[treatment!='delta']
 highsnodelta<-highsnodelta[order(match(trtgroup,c("SA","SW","delta","SA SW","SA delta","SW delta","SA SW delta")))]
@@ -137,7 +113,7 @@ ggplot(highsnodelta, aes(x=treatment, y=transcript, color=genotype)) +
     legend.position = "none",
     text = element_text(size = 9),
     axis.text = element_text(size = 9))+
-  ylab("Transcript abundace")+
+  ylab("Transcript abundance")+
   xlab("Treatment")+
   stat_summary(
     data = subset(highsnodelta, genotype == "C"),
@@ -156,7 +132,58 @@ ggplot(highsnodelta, aes(x=treatment, y=transcript, color=genotype)) +
   ) 
 
 
+##single gene expression over environment for SA specific genes###
+genes<-c("ID","treatment","At3g26830",
+         "At2g14610","At2g40750","At2g26020")
+rils<-fread("data/rils_pheno.txt")
+rils<-rils[,.SD,.SDcols = genes]
+parents<-fread("data/parents_pheno_corrected.txt")
+parents<-parents[,lapply(.SD,mean),by = .(treatment,ID)]
+parents$rep<-NULL
+parents<-parents[,.SD,.SDcols = genes]
+genesdt<-rbind(rils,parents)
+genesdt<-genesdt[treatment != "delta"]
 
+geneslong<-melt(genesdt,id = c("ID","treatment"),variable.name = "transcript")
+ggplot(geneslong,aes(x = treatment, y = value, group = ID))+
+  geom_line(alpha = 0.2, linewidth = 0.5)+
+  facet_wrap(~transcript, scales = "free_y",
+             labeller = as_labeller(c(At3g26830 = "PAD3 (AT3G26830)",
+                          At2g14610 = "PR1 (AT2G14610)",
+                          At2g40750 = "WRKY54 (AT2G40750)",
+                          At2g26020 = "PDF1.2b (AT2G26020)")))+
+  theme_bw()+
+  theme(panel.background = element_blank(),
+        strip.text = element_text(size=7))+
+        ylab("Transcript Abundance")+
+        xlab("Treatment")+
+  geom_line(data=geneslong[ID=="Bay"],aes(x=treatment,y=value,group=ID),size=2,colour="#56B4E9")+
+  geom_line(data=geneslong[ID=="Sha"],aes(x=treatment,y=value,group=ID),size=2,colour="#CC79A7")
+
+
+
+
+
+
+
+
+
+
+geneplots<-lapply(highsgeneinfolist,FUN = function(genetable){
+  genetable[genotype==-1]<-NA
+  genetable<-na.omit(genetable)
+  genedtmean <- na.omit(genetable[, mean(transcript), by = .(treatment, genotype)])
+  colnames(genedtmean)[3] <- "transcript_abundance"
+  gpl<-ggplot(genedtmean,aes(x=genotype,y=transcript_abundance,color=treatment))+
+    geom_line(aes(group=treatment))+
+    ggtitle(paste(genetable$trtgroup,"\n",genetable$txname))+
+    theme(plot.title = element_text(size=6,face = 'bold'))
+  
+  return(gpl)
+})
+pdf("single_gene_plots_collapsedqtls_final.pdf", width = 8, height = 14) # Adjust dimensions as needed
+do.call("grid.arrange", c(geneplots, ncol = 2, top = "Gene Expression Plots"))
+dev.off() # Close the PDF device
 
 
 # This line adds facets, in a grid organized by 'trtgroup' and 'type'

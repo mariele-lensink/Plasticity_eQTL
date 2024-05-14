@@ -17,8 +17,8 @@ igmap<-fread("data/imputed_gmap_final.txt")
 igmap<-igmap[,.(marker,chr,pos)]
 setnames(igmap,names(igmap),c("txname","tx_chr","tx_pos"))
 #92,019 qtl across grps, 3,290 dont have useful names, removed, now 88,729 qtls
-peaks<-peakdf[which(peakdf$txname %in% igmap$txname)]
-
+peaks2<-peakdf[which(peakdf$txname %in% igmap$txname)]
+dropped_qtls<-peakdf[!which(peakdf$txname %in% igmap$txname)]
 #now i have a table with all the info i need :)
 qtls<-merge(peaks,igmap,by="txname",all.x=TRUE)
 
