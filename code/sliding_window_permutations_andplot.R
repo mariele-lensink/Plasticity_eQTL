@@ -3,6 +3,7 @@ library(ggplot2)
 library(rlist)
 library(reshape2)
 library(patchwork)
+library(cowplot)
 source("github/plasticity_eQTL/code/functions.R")
 
 qtls<-fread("data/qtls_10cMwindow_notcollapsed_rsq_March18.txt")
@@ -45,26 +46,37 @@ SWcutoff<-quantile(as.vector(as.matrix(SWperm_windowcounts)),0.95)
 ciscounts <- sliding_window_counts_ggplot[!(Count == "0" & Index > 73)]
 transcounts <-sliding_window_counts_ggplot[!(Count == "0" & Index > 73)]
 custom_colors <- c("SA" = "#377EB8", "delta" = "#E6550D", "SW" = "#4DAF4A")
-trans<-ggplot(transcounts,aes(x=Index,y=Count,color = Treatment))+
+cis<-ggplot(ciscounts,aes(x=Index,y=Count,color = Treatment))+
   scale_color_manual(values=custom_colors)+
   scale_y_continuous(expand = c(0,0))+
   geom_line()+facet_wrap(~Chromosome,nrow = 1,scales = 'free_x')+
   theme_bw()+
-  ylab('# of Transcripts')+
+  ylab('# of Transcripts (Cis)')+
   xlab(NULL)+
-  theme(text = element_text(size = 9),
-        axis.text.x = element_text(angle = 45, vjust = 1.25, hjust=1))+
-  geom_hline(yintercept = deltacutoff, linetype="dashed", color = "#E6550D", linewidth=.4)+
-  geom_hline(yintercept = SAcutoff, linetype="dashed", color = "#377EB8", linewidth=.4)+
-  geom_hline(yintercept = SWcutoff, linetype="dashed", color = "#4DAF4A", linewidth=.4)+
-  theme(legend.position=c(0.1,0.8),
-        text = element_text(size = 6),
+  theme(text = element_text(size = 6),
         axis.text = element_text(size=6),
+        axis.text.x = element_text(angle = 45, vjust = 1.25, hjust=1),
         legend.background = element_rect(fill='transparent'),
         panel.grid.major = element_blank(),
         panel.grid.minor = element_blank(),
         legend.key.size = unit(0.4, "cm"),  # Adjust the key size
         legend.spacing.y = unit(0.05, "cm"),  # Adjust spacing between legend items
-        legend.box.margin = margin(1, 1, 1, 1))
+        legend.box.margin = margin(1, 1, 1, 1),
+        #legend.position=c(0.1,0.75)
+        legend.position = 'none')+
+  geom_hline(yintercept = deltacutoff, linetype="dashed", color = "#E6550D", linewidth=.4)+
+  geom_hline(yintercept = SAcutoff, linetype="dashed", color = "#377EB8", linewidth=.4)+
+  geom_hline(yintercept = SWcutoff, linetype="dashed", color = "#4DAF4A", linewidth=.4)
  
-combined_plot<-trans/cis
+
+
+trans <- trans + theme(plot.margin = unit(c(0.1, 1, 0.1, 1), "lines"))
+
+# Adjusting margins of the cis plot (reduce top margin)
+cis <- cis + theme(plot.margin = unit(c(0.1, 1, 0.11, 1), "lines"))
+
+# Combine the plots with adjusted margins
+combined_plot <- plot_grid(trans, cis, labels = c('B', 'C'), label_size = 12, rel_widths = c(1, 3),ncol=1)
+
+plot_grid(fig4a,combined_plot, labels = c('A', ''), label_size = 12, rel_widths = c(1,4))
+

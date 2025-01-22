@@ -15,19 +15,19 @@ library(patchwork)
 qtls<-fread("data/qtls_10cMwindow_notcollapsed_rsq_March18.txt")
 x<-data.table(table(qtls[,type,trt]))
 colnames(x)[3]<-'txcount'
-ggplot(x, aes(fill = type, x = trt, y= txcount))+
+fig4a<-ggplot(x, aes(fill = type, x = trt, y= txcount))+
   geom_col(position = 'fill')+
-  geom_text(aes(label= txcount),position = position_fill(vjust=0.5),size = 3)+
+  geom_text(aes(label= txcount),position = position_fill(vjust=0.5),size = 2)+
   scale_y_continuous(expand = c(0,0))+
   ylab("Proportion of Cis and Trans eQTLs")+
   xlab("Treatment Group")+
   labs(fill="Regulatory Type")+
   theme_bw()+
   theme(legend.position="none",
-        text = element_text(size = 9),
+        text = element_text(size = 6),
         panel.grid.major = element_blank(),
         panel.grid.minor = element_blank(),
-        axis.text = element_text(size=9))+
+        axis.text = element_text(size=6))+
   scale_fill_grey(start = 0.5,end=0.8)
 
 
@@ -41,12 +41,15 @@ p1<-ggplot(dt,aes(x=trtgroup,fill=type),scales = 'free',space = 'free')+geom_bar
   theme(panel.grid.major = element_blank(),
         panel.grid.minor = element_blank(),
         legend.position = "none",
-        text = element_text(size = 9),
+        axis.text.y = element_text(size = 6, angle = 45),
+        text = element_text(size = 6),
         axis.text.x=element_blank(),
         axis.ticks.x=element_blank(),
-        axis.title.x=element_blank())+
+        axis.title.x=element_blank(),
+        plot.margin = unit(c(0.5, 0.5, 0.1, 0.5), "lines"))+
   ylab("# of QTLs")+
-  geom_text(stat='count', aes(label=after_stat(count)), vjust=-.2,size = 2,position = position_dodge(width=.9))
+  geom_text(stat='count', aes(label=after_stat(count)), 
+            vjust=-.2,size = 2,position = position_dodge(width=.9))
 
 
 p2<-ggplot(dt,aes(x=trtgroup,y = rsq,factor = type))+
@@ -61,11 +64,14 @@ p2<-ggplot(dt,aes(x=trtgroup,y = rsq,factor = type))+
   theme(panel.grid.major = element_blank(),
         panel.grid.minor = element_blank(),
         legend.position = "none",
-        text = element_text(size = 9))+
-  scale_color_grey(start = 0.5,end=0.8)
+        text = element_text(size=6),
+        plot.margin = unit(c(0.1, 0.5, 0.5, 0.5), "lines"),
+        axis.text.y = element_text(size=6))+
+  scale_color_grey(start = 0.5,end=0.8)+
+  theme_combmatrix(combmatrix.label.text = element_text(size=6),
+                   combmatrix.panel.point.size = 2)
 
 
+plot_grid(p1,p2,labels = c('A', 'B'), label_size = 12,ncol=1,rel_heights = c(1,1.25))
+m 
 
-p1 + p2 + plot_layout(ncol = 1)
-
-qtls[]

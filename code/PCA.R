@@ -76,7 +76,6 @@ plot_list <- list()
 #################################################################################################################################
 library(ggplot2)
 library(data.table)
-library(gridExtra)  # For arranging plots
 
 run_pca_plot <- function(data, treatment_group) {
   # Subset data
@@ -99,8 +98,9 @@ run_pca_plot <- function(data, treatment_group) {
     geom_point(data = pcs[ID == "Sha"], aes(col = ID), size = 1, colour = "#CC79A7") +
     xlab(paste0("PC1 - ", pca_var_per[1], "%")) +
     ylab(paste0("PC2 - ", pca_var_per[2], "%")) +
-    theme(text = element_text(size = 9), 
-          axis.text = element_text(size = 9),
+    theme(text = element_text(size = 6), 
+          axis.text = element_text(size = 6),
+          axis.text.x = element_text(angle = 45),
           panel.grid = element_blank())
   
   return(p)
@@ -122,11 +122,22 @@ p3 <- plots[[1]][[3]]
 p4 <- plots[[2]][[1]]
 p5 <- plots[[2]][[2]]
 p6 <- plots[[2]][[3]]
-
-# Combine plots in a 2x3 layout
-plot_layout <- (p1 | p2 | p3) /
-  (p4 | p5 | p6)
-
+ 
+grid <- plot_grid(
+  p1, p2, p3,
+  p4, p5, p6,
+  ncol = 3, nrow = 2,
+  align = 'hv', 
+  axis = 'tb'
+)
+full_plot <- ggdraw() +
+  draw_plot(grid, x = 0.05, y = 0.01, width = 0.95, height = 0.95) +
+  draw_label("All Transcripts",angle = 90, x = 0.02, y = 0.67, hjust = 0, vjust = 0, size = 7, fontface = 'bold') +
+  draw_label("Transcripts with\ncis-eQTL removed", angle = 90,x = 0.05, y = 0.18, hjust = 0, vjust = 0, size = 7, fontface = 'bold') +
+  draw_label("Salicylic Acid", x = 0.26, y = 0.98, hjust = 0.5, vjust = 1, size = 7, fontface = 'bold', angle = 0) +
+  draw_label("Silwet", x = 0.58, y = 0.98, hjust = 0.5, vjust = 1, size = 7, fontface = 'bold', angle = 0) +
+  draw_label("Delta", x = 0.9, y = 0.98, hjust = 0.5, vjust = 1, size = 7, fontface = 'bold', angle = 0)
+full_plot
 
 
 
